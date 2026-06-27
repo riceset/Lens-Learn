@@ -56,13 +56,7 @@ struct CaptureView: View {
                             isSaved: wordBank.contains(card),
                             image: viewModel.images[card.id],
                             isImageLoading: viewModel.loadingImageIDs.contains(card.id),
-                            onSave: {
-                                // Carry the generated object image onto the saved card so it
-                                // persists into the Word Bank / Forge instead of being lost.
-                                var savedCard = card
-                                savedCard.image = viewModel.images[card.id] ?? card.image
-                                wordBank.toggle(savedCard)
-                            }
+                            onSave: { wordBank.toggle(card) }
                         )
                     }
                 }
