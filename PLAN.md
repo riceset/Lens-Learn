@@ -10,11 +10,39 @@ described in `CLAUDE.md` and `lens-and-learn-team-brief.md`.
 
 ## 0. Guiding constraints (from the brief)
 
-- **No login, no persistence, one language (Mandarin + pinyin), one beautiful demo path.**
+- **No login, no persistence, one beautiful demo path.**
+- **Target language is configurable; Mandarin (+ pinyin) is the build/demo default.** The
+  pipeline is language-agnostic — Gemini takes the target language as a prompt parameter, so
+  the same code does **Spanish, Japanese, French, etc.** by changing one config value. We
+  build and demo Mandarin first; other languages are a config flip, not a rewrite (§0.5).
 - Word Bank is an in-memory `@Observable` array — **delete all SwiftData**.
 - One shared networking helper used by both feature areas.
 - API key auth only (Google AI Studio key). Never commit the key.
 - Beautiful demo path > edge-case handling.
+
+## 0.5. Language design — Mandarin now, extensible by design
+
+The app is not hard-wired to Mandarin. A single `AppConfig.targetLanguage` drives the whole
+pipeline:
+
+```swift
+struct TargetLanguage {
+    let name: String          // "Mandarin Chinese", "Spanish"
+    let romanizationLabel: String?  // "pinyin" for Mandarin; nil for Spanish/French
+    let ttsLocale: String     // "zh-CN", "es-ES", "ja-JP", ...
+}
+```
+
+- **Vision & forge prompts** interpolate `targetLanguage.name` ("label each object in
+  {language}…"), so no prompt is Mandarin-specific.
+- **`romanization` field** (see §4) holds pinyin for Mandarin and is simply empty/omitted for
+  languages that don't use one (Spanish, French) — the card UI hides the row when nil.
+- **TTS** (§6) reads `ttsLocale`, so pronunciation follows the chosen language for free.
+- **Demo default:** `TargetLanguage(name: "Mandarin Chinese", romanizationLabel: "pinyin",
+  ttsLocale: "zh-CN")`. Swap to Spanish with one literal — no code path changes.
+
+This costs ~zero extra build time (it's just a parameter instead of a constant) but lets the
+pitch honestly say "works for any language — here's Mandarin."
 
 ---
 
@@ -99,26 +127,27 @@ LensLearnTests/                 (new test target)
 
 ```swift
 // App-side model. id is local identity, NOT decoded from Gemini.
+// `romanization` is language-aware: pinyin for Mandarin, nil for Spanish/French.
 struct VocabCard: Identifiable, Hashable {
     let id = UUID()
-    let word: String          // 椅子
-    let pinyin: String        // yǐ zi
-    let english: String       // chair
-    let sentence: String      // example sentence (Mandarin)
+    let word: String              // 椅子   / "silla"
+    let romanization: String?     // "yǐ zi" / nil (UI hides the row when nil)
+    let english: String           // chair
+    let sentence: String          // example sentence in the target language
 }
 
 // Wire model — what Gemini actually returns. Decode this, then map to VocabCard.
 struct VocabCardDTO: Decodable {
     let word: String
-    let pinyin: String
+    let romanization: String?     // ask Gemini for it only when the language has one
     let english: String
     let sentence: String
 }
 
 struct ForgeResult {
-    let sentence: String      // woven Mandarin sentence
-    let pinyin: String
-    let image: UIImage?       // nil while loading
+    let sentence: String          // woven sentence in the target language
+    let romanization: String?     // pinyin for Mandarin; nil otherwise
+    let image: UIImage?           // nil while loading
 }
 ```
 
@@ -147,9 +176,10 @@ Single `struct` with async throwing methods. Base host:
   `jpegData(compressionQuality: 0.7)` → base64 → `inline_data` part (`mime_type: image/jpeg`).
   A raw 12MP photo is multi-MB of base64 = slow upload + slow vision latency on stage.
 - Text part: prompt to **detect the salient physical objects in the photo** (chair, lamp,
-  cup, plant…) and label each object with its Mandarin word / pinyin / english / example
-  sentence. The input is the object the user pointed at — not text in the image; the prompt
-  must say "identify objects you see," never "read words."
+  cup, plant…) and label each object in **`targetLanguage.name`** with word / romanization
+  (only if the language has one) / english / example sentence. The input is the object the
+  user pointed at — not text in the image; the prompt must say "identify objects you see,"
+  never "read words." No string in the prompt is Mandarin-specific (§0.5).
 - **Constrain output** `[fold — Codex #11]`: ask for **4–6 concrete beginner nouns**, not
   "everything." Arbitrary room clutter yields boring/duplicate/abstract vocab; a bounded,
   concrete ask keeps cards demo-quality. Pair with a curated sample photo.
@@ -158,10 +188,10 @@ Single `struct` with async throwing methods. Base host:
   (array of objects) to force clean structured output — no markdown fences to strip.
 - Decode `candidates[0].content.parts[0].text` (a JSON string) into `[VocabCard]`.
 
-### 5b. `forge(words: [VocabCard]) async throws -> (sentence: String, pinyin: String, imagePrompt: String)`
+### 5b. `forge(words: [VocabCard]) async throws -> (sentence: String, romanization: String?, imagePrompt: String)`
 - Model `gemini-3.5-flash`, text-only.
-- Prompt: weave these words into ONE natural Mandarin sentence; return JSON
-  `{ "sentence", "pinyin", "image_prompt" }`.
+- Prompt: weave these words into ONE natural sentence in **`targetLanguage.name`**; return
+  JSON `{ "sentence", "romanization", "image_prompt" }` (romanization null when N/A).
 - **image_prompt must be plain English describing the scene** — never asks the image
   model to render Mandarin text (renders text badly).
 
@@ -212,17 +242,19 @@ eat the afternoon or 401 on stage. On-device synthesis is free, offline, zero-se
 ```swift
 final class SpeechPlayer {
     private let synth = AVSpeechSynthesizer()
-    func speak(_ text: String) {
+    func speak(_ text: String, locale: String) {   // locale from targetLanguage.ttsLocale
         let u = AVSpeechUtterance(string: text)
-        u.voice = AVSpeechSynthesisVoice(language: "zh-CN")
+        u.voice = AVSpeechSynthesisVoice(language: locale)  // "zh-CN", "es-ES", ...
         synth.speak(u)
     }
 }
 ```
+- Locale comes from `targetLanguage.ttsLocale`, so pronunciation follows the chosen language
+  with no extra code — Mandarin uses `zh-CN`, Spanish `es-ES`.
 - No network, no key, no `AVAudioSession` round-trip with a server. Slightly less natural
   than Wavenet — acceptable trade for zero demo risk.
-- If `zh-CN` voice is absent on the device, `voice` is nil and it stays silent — surface a
-  one-line "voice unavailable" note rather than failing silently (closes the §14 gap).
+- If the requested voice is absent on the device, `voice` is nil and it stays silent —
+  surface a one-line "voice unavailable" note rather than failing silently (closes §14 gap).
 
 ---
 
@@ -255,7 +287,7 @@ flake on stage still kills the money shot. So add a zero-network canned path:
 - Pre-pick one great demo photo and bundle it in Assets for a fallback "Use sample" button.
 
 ### VocabCardView
-- Shows word (large) · pinyin · english · example sentence.
+- Shows word (large) · romanization (row hidden when nil) · english · example sentence.
 - **Speaker button** → `SpeechPlayer.speak(word)`.
 - **Save toggle** (bookmark) → `wordBank.toggle(card)`; filled when saved.
 
@@ -373,7 +405,9 @@ audio playback (needs device audio), SwiftUI view rendering.
 - **Live-API & E2E tests** — network-dependent, low ROI for a 4hr demo.
 - **API key hardening** — key ships in the app binary (extractable from IPA). Acceptable
   for a hackathon demo; would need a backend proxy for production.
-- **Multi-language** — Mandarin + pinyin only.
+- **In-app language switcher UI** — the pipeline is language-agnostic (§0.5) and Spanish/etc.
+  work by changing `AppConfig.targetLanguage`, but we ship Mandarin as the default and don't
+  build a runtime language-picker screen for the demo. (Capability stated; UI deferred.)
 - **Live camera capture** — `PhotosPicker` (snap-or-pick) only; the pitch says "snap or pick
   a photo" (matches the brief), not literal live AR. Camera path deferred.
 - **Cloud TTS / Wavenet voice** — replaced by on-device `AVSpeechSynthesizer` (§6); the
