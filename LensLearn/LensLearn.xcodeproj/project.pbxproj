@@ -8,6 +8,7 @@
 
 /* Begin PBXFileReference section */
 		F79AB6E62FEF7B91008D1D7F /* LensLearn.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LensLearn.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F700000000000000000000A1 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -32,6 +33,7 @@
 		F79AB6DD2FEF7B91008D1D7F = {
 			isa = PBXGroup;
 			children = (
+				F700000000000000000000A1 /* Secrets.xcconfig */,
 				F79AB6E82FEF7B91008D1D7F /* LensLearn */,
 				F79AB6E72FEF7B91008D1D7F /* Products */,
 			);
@@ -127,6 +129,7 @@
 /* Begin XCBuildConfiguration section */
 		F79AB6F12FEF7B93008D1D7F /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = F700000000000000000000A1 /* Secrets.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -191,6 +194,7 @@
 		};
 		F79AB6F22FEF7B93008D1D7F /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = F700000000000000000000A1 /* Secrets.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
