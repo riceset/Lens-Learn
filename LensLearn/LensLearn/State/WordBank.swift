@@ -1,11 +1,31 @@
 import Combine
 import Foundation
+import SwiftData
 
 @MainActor
 final class WordBank: ObservableObject {
+    /// In-memory cache of persisted cards, hydrated from SwiftData and kept in
+    /// saved (insertion) order. The store is the source of truth; this drives the UI.
     @Published private(set) var saved: [VocabCard] = []
-    /// IDs of cards the user has picked to forge into a sentence.
+    /// IDs of cards the user has picked to forge into a sentence. Selection is
+    /// transient UI state, so it is intentionally not persisted.
     @Published private(set) var selectedIDs: Set<UUID> = []
+
+    private let context: ModelContext
+
+    init(context: ModelContext) {
+        self.context = context
+        refresh()
+    }
+
+    /// Convenience for previews/tests: an isolated in-memory store.
+    convenience init() {
+        let container = try! ModelContainer(
+            for: SavedWord.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        self.init(context: container.mainContext)
+    }
 
     /// Selected cards, in saved order, ready to forge.
     var selectedCards: [VocabCard] {
@@ -20,13 +40,15 @@ final class WordBank: ObservableObject {
         saved.contains { $0.word == card.word }
     }
 
+    /// Save the card (with its image) if not already saved by word, otherwise remove it.
     func toggle(_ card: VocabCard) {
-        if let index = saved.firstIndex(where: { $0.word == card.word }) {
-            selectedIDs.remove(saved[index].id)
-            saved.remove(at: index)
+        if let existing = storedWord(matching: card.word) {
+            selectedIDs.remove(existing.id)
+            context.delete(existing)
         } else {
-            saved.append(card)
+            context.insert(SavedWord(from: card))
         }
+        persist()
     }
 
     func isSelected(_ card: VocabCard) -> Bool {
@@ -44,14 +66,41 @@ final class WordBank: ObservableObject {
     /// Seed the bank with sample flashcards (skips words already saved).
     func loadSamples() {
         for card in DemoData.vocabCards where !contains(card) {
-            saved.append(card)
+            context.insert(SavedWord(from: card))
         }
+        persist()
     }
 
     func remove(at offsets: IndexSet) {
-        for index in offsets.sorted(by: >) {
-            selectedIDs.remove(saved[index].id)
-            saved.remove(at: index)
+        for index in offsets {
+            let card = saved[index]
+            selectedIDs.remove(card.id)
+            if let existing = storedWord(matching: card.word) {
+                context.delete(existing)
+            }
         }
+        persist()
+    }
+
+    // MARK: - Persistence helpers
+
+    private func persist() {
+        try? context.save()
+        refresh()
+    }
+
+    private func refresh() {
+        let descriptor = FetchDescriptor<SavedWord>(
+            sortBy: [SortDescriptor(\.createdAt, order: .forward)]
+        )
+        let words = (try? context.fetch(descriptor)) ?? []
+        saved = words.map { $0.toCard() }
+    }
+
+    private func storedWord(matching word: String) -> SavedWord? {
+        let descriptor = FetchDescriptor<SavedWord>(
+            predicate: #Predicate { $0.word == word }
+        )
+        return try? context.fetch(descriptor).first
     }
 }

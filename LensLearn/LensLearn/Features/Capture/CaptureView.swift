@@ -56,7 +56,7 @@ struct CaptureView: View {
                             isSaved: wordBank.contains(card),
                             image: viewModel.images[card.id],
                             isImageLoading: viewModel.loadingImageIDs.contains(card.id),
-                            onSave: { wordBank.toggle(card) }
+                            onSave: { wordBank.toggle(card.withImage(viewModel.images[card.id])) }
                         )
                     }
                 }

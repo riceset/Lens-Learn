@@ -15,6 +15,7 @@ struct ForgeView: View {
                     ProgressView("Forging...")
                         .font(.title3)
                 case .ready(let composition):
+                    sentenceIllustration
                     if !composition.placements.isEmpty {
                         layoutCanvas(composition.placements)
                     }
@@ -42,6 +43,32 @@ struct ForgeView: View {
         case .loading: "loading"
         case .ready: "ready"
         case .error: "error"
+        }
+    }
+
+    /// Apple Image Playground illustration of the forged sentence (or a spinner
+    /// while it generates). Hidden if generation failed / is unavailable.
+    @ViewBuilder
+    private var sentenceIllustration: some View {
+        if let image = viewModel.sentenceImage {
+            Image(lensImage: image)
+                .resizable()
+                .scaledToFit()
+                .frame(maxWidth: .infinity)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+        } else if viewModel.isSentenceImageLoading {
+            ZStack {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color(.secondarySystemBackground))
+                VStack(spacing: 10) {
+                    ProgressView()
+                    Text("Illustrating the sentence...")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .frame(height: 220)
+            .frame(maxWidth: .infinity)
         }
     }
 
