@@ -1,0 +1,15 @@
+# User-specific Xcode settings (NEVER commit these)
+**/xcuserdata/
+**/*.xcuserdatad/
+
+# Xcode build artifacts & temporary files
+build/
+DerivedData/
+*.moved-aside
+*.xcuserstate
+
+# Private Secrets configuration (contains API keys)
+Secrets.xcconfig
+
+# OS-specific files
+.DS_Store
