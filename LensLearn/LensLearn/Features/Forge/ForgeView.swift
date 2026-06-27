@@ -15,6 +15,9 @@ struct ForgeView: View {
                     ProgressView("Forging...")
                         .font(.title3)
                 case .ready(let composition):
+                    if !composition.placements.isEmpty {
+                        layoutCanvas(composition.placements)
+                    }
                     compositionBlock(composition)
                 case .error(let message):
                     Text(message)
@@ -40,6 +43,34 @@ struct ForgeView: View {
         case .ready: "ready"
         case .error: "error"
         }
+    }
+
+    private func layoutCanvas(_ placements: [CardPlacement]) -> some View {
+        GeometryReader { geo in
+            ZStack {
+                ForEach(placements) { placement in
+                    if let card = words.first(where: { $0.word == placement.word }),
+                       let image = card.image {
+                        let side = min(geo.size.width, geo.size.height) * 0.5 * placement.scale
+                        Image(lensImage: image)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: side, height: side)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                            .shadow(radius: 3, y: 2)
+                            .position(
+                                x: placement.x * geo.size.width,
+                                y: placement.y * geo.size.height
+                            )
+                            .zIndex(Double(placement.zIndex))
+                    }
+                }
+            }
+            .frame(width: geo.size.width, height: geo.size.height)
+        }
+        .frame(height: 300)
+        .frame(maxWidth: .infinity)
+        .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemBackground)))
     }
 
     @ViewBuilder

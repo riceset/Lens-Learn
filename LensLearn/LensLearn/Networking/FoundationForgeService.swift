@@ -78,6 +78,13 @@ struct FoundationForgeService {
 
         \(romanizationLine)
         Add 2 to 4 short grammar notes explaining the key words, particles, or sentence patterns.
+
+        Then arrange these objects on a canvas as they would relate in the real world. \
+        For every word above, output one placement using its real-world relationships: \
+        large supporting objects (a desk, the ground) sit low and wide; objects that rest \
+        on or above another sit higher with a larger zIndex; size reflects real relative \
+        size. Use normalized coordinates where x=0 is left, x=1 is right, y=0 is top, y=1 \
+        is bottom. Output exactly one placement per word, using the words exactly as written.
         """
 
         let response = try await session.respond(to: prompt, generating: GeneratedComposition.self)
@@ -88,11 +95,25 @@ struct FoundationForgeService {
         }
         let romanization = content.romanization.trimmingCharacters(in: .whitespacesAndNewlines)
 
+        let validWords = Set(words.map(\.word))
+        let placements = content.placements
+            .filter { validWords.contains($0.word) }
+            .map { placement in
+                CardPlacement(
+                    word: placement.word,
+                    x: placement.x.clamped(to: 0...1),
+                    y: placement.y.clamped(to: 0...1),
+                    scale: placement.scale.clamped(to: 0.15...1),
+                    zIndex: placement.zIndex
+                )
+            }
+
         return ForgeComposition(
             sentence: content.sentence,
             romanization: romanization.isEmpty ? nil : romanization,
             english: content.english,
-            grammarNotes: notes
+            grammarNotes: notes,
+            placements: placements
         )
     }
 
@@ -127,6 +148,9 @@ private struct GeneratedComposition {
 
     @Guide(description: "Two to four short grammar notes about notable words, particles, or patterns used in the sentence.")
     var grammarNotes: [GeneratedGrammarNote]
+
+    @Guide(description: "One placement per provided word, arranging the objects by their real-world spatial relationships.")
+    var placements: [GeneratedPlacement]
 }
 
 @available(iOS 26.0, *)
@@ -138,4 +162,29 @@ private struct GeneratedGrammarNote {
     @Guide(description: "A concise, beginner-friendly explanation in English of how this grammar point works.")
     var explanation: String
 }
+
+@available(iOS 26.0, *)
+@Generable
+private struct GeneratedPlacement {
+    @Guide(description: "The vocabulary word being placed; must exactly match one of the provided words.")
+    var word: String
+
+    @Guide(description: "Horizontal center from 0 (far left) to 1 (far right).")
+    var x: Double
+
+    @Guide(description: "Vertical center from 0 (top) to 1 (bottom). Supporting objects like a desk or the ground sit lower (larger y).")
+    var y: Double
+
+    @Guide(description: "Relative size from 0.15 (small) to 1.0 (large), reflecting the object's real-world size.")
+    var scale: Double
+
+    @Guide(description: "Stacking order; higher is drawn in front. An object resting on another should have a higher zIndex than what it rests on.")
+    var zIndex: Int
+}
 #endif
+
+private extension Comparable {
+    func clamped(to range: ClosedRange<Self>) -> Self {
+        min(max(self, range.lowerBound), range.upperBound)
+    }
+}
