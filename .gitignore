@@ -1,0 +1,4 @@
+Secrets.xcconfig
+Config.swift
+*.xcuserstate
+DerivedData/
