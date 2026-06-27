@@ -6,39 +6,46 @@ final class ForgeViewModel: ObservableObject {
     enum Phase {
         case idle
         case loading
-        case sentenceReady(sentence: String, romanization: String?)
-        case imageReady(ForgeResult)
+        /// Composition is ready; illustration is still rendering (or was skipped/failed).
+        case sentenceReady(ForgeComposition)
+        /// Composition plus a finished illustration.
+        case imageReady(ForgeComposition, ForgeResult)
         case error(String)
     }
 
     @Published var phase: Phase = .idle
 
-    private let service: GeminiService
+    private let composer: FoundationForgeService
+    private let imageService: GeminiService
 
-    init(service: GeminiService? = nil) {
-        self.service = service ?? GeminiService()
+    init(composer: FoundationForgeService = FoundationForgeService(),
+         imageService: GeminiService? = nil) {
+        self.composer = composer
+        self.imageService = imageService ?? GeminiService()
     }
 
     func forge(words: [VocabCard]) async {
-        //                 forge(words) --ok--> sentence+pinyin+image_prompt
-        //   .idle --tap--> .loading --------------------------------------.
-        //                    | err                                         |
-        //                    v                                             v
-        //                 .error <--err-- generateImage(image_prompt)   .sentenceReady
-        //                    ^                    | ok                     |
-        //                    |                    v                        |
-        //                    '---- retry ---- .imageReady (bloom) <--------'
+        //   .idle --task--> .loading --compose(FoundationModels)--> .sentenceReady(+grammar)
+        //                       | err                                       |
+        //                       v                                           v generateImage(imagePrompt)
+        //                    .error                              .imageReady  (image failure stays .sentenceReady)
         phase = .loading
         do {
-            let forged = try await service.forge(words: words)
-            phase = .sentenceReady(sentence: forged.sentence, romanization: forged.romanization)
-            let image = try await service.generateImage(prompt: forged.imagePrompt)
-            phase = .imageReady(ForgeResult(
-                sentence: forged.sentence,
-                romanization: forged.romanization,
-                image: image,
-                synthIDWatermarked: !AppConfig.demoMode
-            ))
+            let composition = try await composer.compose(words: words)
+            phase = .sentenceReady(composition)
+
+            // Illustration is a bonus: a failure here must not discard the sentence.
+            do {
+                let image = try await imageService.generateImage(prompt: composition.imagePrompt)
+                phase = .imageReady(composition, ForgeResult(
+                    sentence: composition.sentence,
+                    romanization: composition.romanization,
+                    image: image,
+                    synthIDWatermarked: !AppConfig.demoMode
+                ))
+            } catch {
+                phase = .sentenceReady(composition)
+            }
         } catch {
             phase = .error(error.localizedDescription)
         }
