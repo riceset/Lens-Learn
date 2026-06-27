@@ -5,12 +5,32 @@ struct WordBankView: View {
 
     var body: some View {
         List {
+            if wordBank.saved.isEmpty {
+                Section {
+                    ContentUnavailableView {
+                        Label("No words yet", systemImage: "bookmark")
+                    } description: {
+                        Text("Save words from a photo, or load sample words to try forging.")
+                    } actions: {
+                        Button("Load sample words") { wordBank.loadSamples() }
+                            .buttonStyle(.borderedProminent)
+                    }
+                }
+            }
+
             Section {
                 ForEach(wordBank.saved) { card in
                     Button {
                         wordBank.toggleSelection(card)
                     } label: {
-                        HStack(alignment: .firstTextBaseline) {
+                        HStack(alignment: .center, spacing: 12) {
+                            if let image = card.image {
+                                Image(lensImage: image)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 48, height: 48)
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                            }
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(card.word)
                                     .font(.title3.weight(.semibold))
@@ -51,5 +71,14 @@ struct WordBankView: View {
             }
         }
         .navigationTitle("Word Bank")
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    wordBank.loadSamples()
+                } label: {
+                    Label("Load samples", systemImage: "sparkles")
+                }
+            }
+        }
     }
 }

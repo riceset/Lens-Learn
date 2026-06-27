@@ -41,6 +41,13 @@ final class WordBank: ObservableObject {
         }
     }
 
+    /// Seed the bank with sample flashcards (skips words already saved).
+    func loadSamples() {
+        for card in DemoData.vocabCards where !contains(card) {
+            saved.append(card)
+        }
+    }
+
     func remove(at offsets: IndexSet) {
         for index in offsets.sorted(by: >) {
             selectedIDs.remove(saved[index].id)
