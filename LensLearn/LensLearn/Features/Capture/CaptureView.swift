@@ -1,18 +1,10 @@
-import SwiftUI
-import UniformTypeIdentifiers
-
-#if os(iOS)
 import PhotosUI
-#endif
+import SwiftUI
 
 struct CaptureView: View {
     @EnvironmentObject private var wordBank: WordBank
     @StateObject private var viewModel = CaptureViewModel()
-    #if os(iOS)
     @State private var pickerItem: PhotosPickerItem?
-    #else
-    @State private var isImportingPhoto = false
-    #endif
 
     private let columns = [GridItem(.adaptive(minimum: 240), spacing: 14)]
 
@@ -28,19 +20,10 @@ struct CaptureView: View {
                 imagePreview
 
                 HStack {
-                    #if os(iOS)
                     PhotosPicker(selection: $pickerItem, matching: .images) {
                         Label("Pick Photo", systemImage: "photo.on.rectangle")
                     }
                     .buttonStyle(.borderedProminent)
-                    #else
-                    Button {
-                        isImportingPhoto = true
-                    } label: {
-                        Label("Pick Photo", systemImage: "photo.on.rectangle")
-                    }
-                    .buttonStyle(.borderedProminent)
-                    #endif
 
                     Button {
                         viewModel.useSample()
@@ -78,7 +61,6 @@ struct CaptureView: View {
             }
             .padding()
         }
-        #if os(iOS)
         .task(id: pickerItem) {
             guard let pickerItem else { return }
             do {
@@ -89,27 +71,12 @@ struct CaptureView: View {
                 viewModel.errorMessage = error.localizedDescription
             }
         }
-        #else
-        .fileImporter(isPresented: $isImportingPhoto, allowedContentTypes: [.image]) { result in
-            do {
-                let url = try result.get()
-                guard url.startAccessingSecurityScopedResource() else {
-                    viewModel.errorMessage = "Could not access the selected photo."
-                    return
-                }
-                defer { url.stopAccessingSecurityScopedResource() }
-                viewModel.load(data: try Data(contentsOf: url))
-            } catch {
-                viewModel.errorMessage = error.localizedDescription
-            }
-        }
-        #endif
     }
 
     @ViewBuilder
     private var imagePreview: some View {
         if let image = viewModel.selectedImage {
-            Image(platformImage: image)
+            Image(lensImage: image)
                 .resizable()
                 .scaledToFit()
                 .frame(maxHeight: 340)

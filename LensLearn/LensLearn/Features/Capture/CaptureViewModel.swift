@@ -1,15 +1,10 @@
 import Combine
 import Foundation
-
-#if os(iOS)
 import UIKit
-#elseif os(macOS)
-import AppKit
-#endif
 
 @MainActor
 final class CaptureViewModel: ObservableObject {
-    @Published var selectedImage: PlatformImage?
+    @Published var selectedImage: UIImage?
     @Published var cards: [VocabCard] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
@@ -21,7 +16,7 @@ final class CaptureViewModel: ObservableObject {
     }
 
     func load(data: Data) {
-        guard let image = PlatformImage(data: data) else {
+        guard let image = UIImage(data: data) else {
             errorMessage = "Could not load the selected photo."
             return
         }

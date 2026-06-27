@@ -19,7 +19,7 @@ struct ForgeView: View {
             case .imageReady(let result):
                 sentenceBlock(sentence: result.sentence, romanization: result.romanization)
                 if let image = result.image {
-                    Image(platformImage: image)
+                    Image(lensImage: image)
                         .resizable()
                         .scaledToFit()
                         .clipShape(RoundedRectangle(cornerRadius: 8))

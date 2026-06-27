@@ -1,11 +1,6 @@
 import CoreGraphics
 import Foundation
-
-#if os(iOS)
 import UIKit
-#elseif os(macOS)
-import AppKit
-#endif
 
 enum DemoData {
     static let vocabCards: [VocabCard] = [
@@ -20,21 +15,11 @@ enum DemoData {
     static let forgeRomanization = "Yǐzi pángbiān de bēizi, shū hé zhíwù zài wēnnuǎn de dēngguāng xià ānjìng de péizhe wǒ xuéxí."
     static let imagePrompt = "A cozy desk scene with a chair beside a cup, a book, a green plant, and warm lamplight, bright educational illustration style."
 
-    static var demoIllustration: PlatformImage? {
-        #if os(iOS)
+    static var demoIllustration: UIImage? {
         let renderer = UIGraphicsImageRenderer(size: CGSize(width: 1024, height: 768))
         return renderer.image { context in
             drawDemoIllustration(in: context.cgContext, rect: CGRect(x: 0, y: 0, width: 1024, height: 768))
         }
-        #elseif os(macOS)
-        let image = PlatformImage(size: NSSize(width: 1024, height: 768))
-        image.lockFocus()
-        if let context = NSGraphicsContext.current?.cgContext {
-            drawDemoIllustration(in: context, rect: CGRect(x: 0, y: 0, width: 1024, height: 768))
-        }
-        image.unlockFocus()
-        return image
-        #endif
     }
 
     private static func drawDemoIllustration(in context: CGContext, rect: CGRect) {

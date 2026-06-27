@@ -1,10 +1,5 @@
 import Foundation
-
-#if os(iOS)
 import UIKit
-#elseif os(macOS)
-import AppKit
-#endif
 
 struct GeminiService {
     private let apiKey: String
@@ -26,7 +21,7 @@ struct GeminiService {
         self.session = URLSession(configuration: configuration)
     }
 
-    func identifyVocab(in image: PlatformImage?) async throws -> [VocabCard] {
+    func identifyVocab(in image: UIImage?) async throws -> [VocabCard] {
         if demoMode {
             try await Task.sleep(for: .milliseconds(650))
             return DemoData.vocabCards
@@ -106,7 +101,7 @@ struct GeminiService {
         return (dto.sentence, dto.romanization, dto.imagePrompt)
     }
 
-    func generateImage(prompt: String) async throws -> PlatformImage {
+    func generateImage(prompt: String) async throws -> UIImage {
         if demoMode {
             try await Task.sleep(for: .milliseconds(850))
             guard let image = DemoData.demoIllustration else { throw GeminiError.malformedResponse }
@@ -124,7 +119,7 @@ struct GeminiService {
         let response = try await postInteraction(body: body)
         guard let base64 = response.outputImage?.data,
               let data = Data(base64Encoded: base64),
-              let image = PlatformImage(data: data) else {
+              let image = UIImage(data: data) else {
             throw GeminiError.missingGeneratedImage
         }
         return image
