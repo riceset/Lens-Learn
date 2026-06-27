@@ -8,8 +8,6 @@ struct ForgeComposition {
     let romanization: String?
     let english: String
     let grammarNotes: [GrammarNote]
-    /// Plain-English scene description handed to the image model (never rendered text).
-    let imagePrompt: String
 }
 
 struct GrammarNote: Identifiable, Hashable {

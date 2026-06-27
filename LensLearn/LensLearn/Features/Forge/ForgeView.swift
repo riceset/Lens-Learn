@@ -14,23 +14,8 @@ struct ForgeView: View {
                 case .loading:
                     ProgressView("Forging...")
                         .font(.title3)
-                case .sentenceReady(let composition):
+                case .ready(let composition):
                     compositionBlock(composition)
-                    ProgressView("Creating illustration...")
-                case .imageReady(let composition, let result):
-                    compositionBlock(composition)
-                    if let image = result.image {
-                        Image(lensImage: image)
-                            .resizable()
-                            .scaledToFit()
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                            .transition(.scale(scale: 0.96).combined(with: .opacity))
-                    }
-                    if result.synthIDWatermarked {
-                        Text("Generated illustration is provenance-watermarked with SynthID.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
                 case .error(let message):
                     Text(message)
                         .foregroundStyle(.red)
@@ -52,8 +37,7 @@ struct ForgeView: View {
         switch viewModel.phase {
         case .idle: "idle"
         case .loading: "loading"
-        case .sentenceReady: "sentence"
-        case .imageReady: "image"
+        case .ready: "ready"
         case .error: "error"
         }
     }

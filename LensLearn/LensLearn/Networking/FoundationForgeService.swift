@@ -78,8 +78,6 @@ struct FoundationForgeService {
 
         \(romanizationLine)
         Add 2 to 4 short grammar notes explaining the key words, particles, or sentence patterns.
-        Also give a plain-English scene description for an illustration; describe only the scene \
-        and never ask for any text to be rendered in the image.
         """
 
         let response = try await session.respond(to: prompt, generating: GeneratedComposition.self)
@@ -94,8 +92,7 @@ struct FoundationForgeService {
             sentence: content.sentence,
             romanization: romanization.isEmpty ? nil : romanization,
             english: content.english,
-            grammarNotes: notes,
-            imagePrompt: content.imagePrompt
+            grammarNotes: notes
         )
     }
 
@@ -130,9 +127,6 @@ private struct GeneratedComposition {
 
     @Guide(description: "Two to four short grammar notes about notable words, particles, or patterns used in the sentence.")
     var grammarNotes: [GeneratedGrammarNote]
-
-    @Guide(description: "A plain-English visual description of the scene for an illustration. Describe only the scene; never request any rendered text.")
-    var imagePrompt: String
 }
 
 @available(iOS 26.0, *)
