@@ -101,28 +101,28 @@ struct GeminiService {
         return (dto.sentence, dto.romanization, dto.imagePrompt)
     }
 
+    func generateObjectImage(for card: VocabCard) async throws -> UIImage {
+        if demoMode {
+            try await Task.sleep(for: .milliseconds(850))
+            return DemoData.placeholder(for: card)
+        }
+        let prompt = """
+        A simple cute illustration of a \(card.english), clearly recognizable as a \(card.english), \
+        with a small friendly face (eyes and a little smile), soft pastel colors, centered and \
+        isolated on a plain white background, no text, no extra objects, no shadow.
+        """
+        return try await generateImage(prompt: prompt)
+    }
+
     func generateImage(prompt: String) async throws -> UIImage {
         if demoMode {
             try await Task.sleep(for: .milliseconds(850))
             guard let image = DemoData.demoIllustration else { throw GeminiError.malformedResponse }
             return image
         }
-        guard !apiKey.isEmpty else { throw GeminiError.missingAPIKey }
-
-        let body: [String: Any] = [
-            "model": AppConfig.primaryImageModel,
-            "input": [
-                ["type": "text", "text": prompt]
-            ]
-        ]
-
-        let response = try await postInteraction(body: body)
-        guard let base64 = response.outputImage?.data,
-              let data = Data(base64Encoded: base64),
-              let image = UIImage(data: data) else {
-            throw GeminiError.missingGeneratedImage
-        }
-        return image
+        // Images are generated on-device with Apple's Image Playground — no cloud image
+        // API key or credits required. Text/vision still uses the Gemini API above.
+        return try await ImagePlaygroundGenerator.generateImage(prompt: prompt)
     }
 
     private func postGenerateContent(model: String, body: [String: Any]) async throws -> GenerateContentResponse {

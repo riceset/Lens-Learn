@@ -22,6 +22,45 @@ enum DemoData {
         }
     }
 
+    /// A distinct local placeholder per object for the keyless demo path: a deterministic
+    /// pastel background derived from the object's English name, with its first letter as a glyph.
+    static func placeholder(for card: VocabCard) -> UIImage {
+        let size = CGSize(width: 512, height: 512)
+        let renderer = UIGraphicsImageRenderer(size: size)
+        return renderer.image { context in
+            let rect = CGRect(origin: .zero, size: size)
+            let (background, foreground) = placeholderColors(for: card.english)
+
+            context.cgContext.setFillColor(background)
+            context.cgContext.fill(rect)
+
+            let glyph = card.english.first.map { String($0).uppercased() } ?? "?"
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 280, weight: .bold),
+                .foregroundColor: UIColor(cgColor: foreground)
+            ]
+            let attributed = NSAttributedString(string: glyph, attributes: attributes)
+            let textSize = attributed.size()
+            let origin = CGPoint(
+                x: (size.width - textSize.width) / 2,
+                y: (size.height - textSize.height) / 2
+            )
+            attributed.draw(at: origin)
+        }
+    }
+
+    /// Deterministic pastel background + a darker foreground glyph color, hashed from `key`.
+    private static func placeholderColors(for key: String) -> (background: CGColor, foreground: CGColor) {
+        var hash: UInt64 = 5381
+        for scalar in key.unicodeScalars {
+            hash = (hash &* 33) &+ UInt64(scalar.value)
+        }
+        let hue = CGFloat(hash % 360) / 360
+        let background = UIColor(hue: hue, saturation: 0.35, brightness: 0.96, alpha: 1).cgColor
+        let foreground = UIColor(hue: hue, saturation: 0.55, brightness: 0.55, alpha: 1).cgColor
+        return (background, foreground)
+    }
+
     private static func drawDemoIllustration(in context: CGContext, rect: CGRect) {
         context.setFillColor(CGColor(red: 0.95, green: 0.96, blue: 0.92, alpha: 1))
         context.fill(rect)

@@ -70,6 +70,7 @@ enum GeminiError: LocalizedError {
     case badStatus(Int, String)
     case malformedResponse
     case missingGeneratedImage
+    case imagePlaygroundUnavailable(String)
 
     var errorDescription: String? {
         switch self {
@@ -87,6 +88,8 @@ enum GeminiError: LocalizedError {
             "Gemini returned a response the app could not read."
         case .missingGeneratedImage:
             "Gemini did not return an image."
+        case .imagePlaygroundUnavailable(let reason):
+            "Image Playground is unavailable: \(reason)"
         }
     }
 }

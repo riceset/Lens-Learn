@@ -3,6 +3,8 @@ import SwiftUI
 struct VocabCardView: View {
     let card: VocabCard
     let isSaved: Bool
+    let image: UIImage?
+    let isImageLoading: Bool
     let onSave: () -> Void
 
     @State private var voiceMessage: String?
@@ -10,6 +12,8 @@ struct VocabCardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+            imageHeader
+
             HStack(alignment: .firstTextBaseline) {
                 Text(card.word)
                     .font(.system(size: 34, weight: .semibold))
@@ -52,5 +56,26 @@ struct VocabCardView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(.regularMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
+    @ViewBuilder
+    private var imageHeader: some View {
+        if let image {
+            Image(lensImage: image)
+                .resizable()
+                .scaledToFit()
+                .frame(height: 140)
+                .frame(maxWidth: .infinity)
+                .background(Color.white)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+        } else if isImageLoading {
+            ZStack {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.black.opacity(0.04))
+                ProgressView()
+            }
+            .frame(height: 140)
+            .frame(maxWidth: .infinity)
+        }
     }
 }
