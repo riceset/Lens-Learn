@@ -10,6 +10,7 @@ DerivedData/
 
 # Private Secrets configuration (contains API keys)
 Secrets.xcconfig
+Config.swift
 
 # OS-specific files
 .DS_Store
