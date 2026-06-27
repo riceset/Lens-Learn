@@ -6,39 +6,27 @@ final class ForgeViewModel: ObservableObject {
     enum Phase {
         case idle
         case loading
-        case sentenceReady(sentence: String, romanization: String?)
-        case imageReady(ForgeResult)
+        case ready(ForgeComposition)
         case error(String)
     }
 
     @Published var phase: Phase = .idle
 
-    private let service: GeminiService
+    private let composer: FoundationForgeService
 
-    init(service: GeminiService? = nil) {
-        self.service = service ?? GeminiService()
+    init(composer: FoundationForgeService = FoundationForgeService()) {
+        self.composer = composer
     }
 
     func forge(words: [VocabCard]) async {
-        //                 forge(words) --ok--> sentence+pinyin+image_prompt
-        //   .idle --tap--> .loading --------------------------------------.
-        //                    | err                                         |
-        //                    v                                             v
-        //                 .error <--err-- generateImage(image_prompt)   .sentenceReady
-        //                    ^                    | ok                     |
-        //                    |                    v                        |
-        //                    '---- retry ---- .imageReady (bloom) <--------'
+        //   .idle --task--> .loading --compose(FoundationModels)--> .ready(sentence + grammar)
+        //                       | err
+        //                       v
+        //                    .error --retry--> .loading
         phase = .loading
         do {
-            let forged = try await service.forge(words: words)
-            phase = .sentenceReady(sentence: forged.sentence, romanization: forged.romanization)
-            let image = try await service.generateImage(prompt: forged.imagePrompt)
-            phase = .imageReady(ForgeResult(
-                sentence: forged.sentence,
-                romanization: forged.romanization,
-                image: image,
-                synthIDWatermarked: !AppConfig.demoMode
-            ))
+            let composition = try await composer.compose(words: words)
+            phase = .ready(composition)
         } catch {
             phase = .error(error.localizedDescription)
         }
